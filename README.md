@@ -6,7 +6,7 @@ I want to replicate the "Explorer" column on The Graph playground.
 
 ## Image 1
 
-![Image 1](https://lostconversation/subgraph-playground/img_aave.png)
+![Image 1](https://lostconversation/subgraph-playground/public/img_aave.png)
 _here on the right side_
 
 In my app:
@@ -17,5 +17,5 @@ column 4: response
 
 ## Image 2
 
-![Image 2](https://lostconversation/subgraph-playground/img_local.png)
-_Description of Image 2._
+![Image 2](https://lostconversation/subgraph-playground/public/img_local.png)
+_the content in column 2 does not match the Explorer above_

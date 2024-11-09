@@ -1,38 +1,95 @@
-.App {
-  text-align: center;
+/* App.css */
+
+body {
+  background-color: rgb(15, 18, 26);
+  color: rgb(118, 173, 177);
+  margin: 40px;
 }
 
-.App-logo {
-  height: 40vmin;
-  pointer-events: none;
+.app {
+  font-family: Arial, sans-serif;
+  font-size: 14px;
+  max-width: 1600px;
+  margin: 0 auto;
+  font-size: 12px;
 }
 
-@media (prefers-reduced-motion: no-preference) {
-  .App-logo {
-    animation: App-logo-spin infinite 20s linear;
-  }
+.button-container {
+  top: 10px;
+  right: 20px;
 }
 
-.App-header {
-  background-color: #282c34;
-  min-height: 100vh;
+.tab-button {
+  margin: 0 10px;
+  padding: 10px 20px;
+  font-size: 16px;
+  cursor: pointer;
+  border: none;
+  background-color: #3f6694;
+  border-radius: 5px;
+  transition: background-color 0.3s ease;
+}
+
+.clicked {
+  background-color: #303e68;
+  color: rgb(165, 165, 165);
+}
+
+button {
+  padding: 10px 20px;
+  margin: 10px;
+  border-radius: 5px;
+  border: none;
+}
+
+button:hover {
+  opacity: 0.7;
+}
+
+/* Full-width table */
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-bottom: 20px;
+  color: rgb(118, 173, 177);
+  table-layout: fixed; /* Ensures columns are of equal width */
+}
+
+/* Equal-width columns */
+th,
+td {
+  padding: 10px;
+  border: 1px solid rgb(15, 18, 26);
+  text-align: left;
+  vertical-align: top;
+  width: 25%; /* Ensures each column takes 25% of the total width */
+}
+
+th {
+  background-color: #1e3b54;
+}
+
+td {
+  background-color: #182931;
+}
+
+/* Table row hover effect */
+
+/* Pie chart container styling */
+.pieChartContainer {
   display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  font-size: calc(10px + 2vmin);
-  color: white;
+  justify-content: space-around;
+  margin: 20px 0;
 }
 
-.App-link {
-  color: #61dafb;
+.pieChartContainer div {
+  background-color: #f9f9f9;
+  padding: 15px;
+  border-radius: 10px;
+  width: 30%;
+  box-shadow: 0px 4px 6px rgba(0, 0, 0, 0.1);
 }
 
-@keyframes App-logo-spin {
-  from {
-    transform: rotate(0deg);
-  }
-  to {
-    transform: rotate(360deg);
-  }
+.subgraph-details {
+  font-size: 18px;
 }
