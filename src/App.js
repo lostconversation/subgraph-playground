@@ -14,6 +14,7 @@ const App = () => {
     }                  
   }`); // Set the default query here
   const [loading, setLoading] = useState(true);
+  const [subgraphName, setSubgraphName] = useState("");
 
   useEffect(() => {
     const fetchSchema = async () => {
@@ -21,22 +22,29 @@ const App = () => {
         const introspectionQuery = `
           query {
             __schema {
+              queryType {
+                name
+              }
               types {
+                name
+                description
                 fields {
                   name
+                  description
                   type {
                     name
+                    kind
                     ofType {
                       name
-                      ofType {
-                        name
-                      }
+                      kind
                     }
                   }
                 }
               }
             }
           }`;
+
+        console.log("Fetching schema...");
 
         const schemaResponse = await fetch(
           `https://gateway.thegraph.com/api/${API_KEY}/subgraphs/id/${SUBGRAPH_ID[0].key}`,
@@ -50,9 +58,14 @@ const App = () => {
         );
 
         const schemaData = await schemaResponse.json();
-        setRawSchema(JSON.stringify(schemaData, null, 2)); // Save the raw schema JSON
-        setSchemaData(formatSchema(schemaData)); // Process and save the formatted schema
+        console.log("Received schema data:", schemaData);
 
+        setRawSchema(JSON.stringify(schemaData, null, 2));
+
+        const formatted = formatSchema(schemaData);
+        console.log("Formatted schema:", formatted);
+
+        setSchemaData(formatted);
         setLoading(false);
       } catch (err) {
         console.error("Error fetching schema data:", err);
@@ -63,28 +76,74 @@ const App = () => {
     fetchSchema();
   }, []); // This will run only once when the component mounts
 
+  useEffect(() => {
+    fetchSubgraphName();
+  }, []);
+
+  const fetchSubgraphName = async () => {
+    try {
+      const metaQuery = `
+        query {
+          _meta {
+            deployment
+            block {
+              number
+            }
+            hasIndexingErrors
+          }
+        }`;
+
+      const response = await fetch(
+        `https://gateway.thegraph.com/api/${API_KEY}/subgraphs/id/${SUBGRAPH_ID[0].key}`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ query: metaQuery }),
+        }
+      );
+
+      const data = await response.json();
+      console.log("Metadata:", data); // This will help us see what's available
+
+      // Once we see the actual structure, we can update this line to get the correct field
+      if (data?.data?._meta?.deployment) {
+        setSubgraphName(data.data._meta.deployment);
+      }
+    } catch (err) {
+      console.error("Error fetching subgraph metadata:", err);
+    }
+  };
+
   // Function to format schema with hierarchical structure
   const formatSchema = (data) => {
     const schema = data?.data?.__schema?.types || [];
-    return schema
+
+    const filteredSchema = schema.filter(
+      (type) => type && type.name && !type.name.startsWith("__")
+    );
+
+    return filteredSchema
       .map((type) => {
-        const fields = (type.fields || [])
-          .map((field) => {
-            let fieldString = `- ${field.name}: `;
+        let typeString = `${type.name}`;
+        if (type.fields) {
+          const sortedFields = type.fields
+            .filter((field) => field && field.name)
+            .sort((a, b) => {
+              // If either field is 'id', handle special cases
+              if (a.name === "id") return -1; // a is 'id', move it first
+              if (b.name === "id") return 1; // b is 'id', move it first
+              // Otherwise sort alphabetically
+              return a.name.localeCompare(b.name);
+            });
 
-            // Check and handle missing or undefined types
-            const typeName =
-              field.type.name || field.type.ofType?.name || "Not Available";
-            fieldString += typeName;
-
-            if (field.type?.ofType?.ofType?.name) {
-              fieldString += `\n  ${field.type.ofType.ofType.name}`;
-            }
-
-            return fieldString;
-          })
-          .join("\n");
-        return `${type.name}:\n${fields}`;
+          const fields = sortedFields
+            .map((field) => `<span>${field.name}</span>`)
+            .join("\n");
+          typeString += `\n${fields}`;
+        }
+        return typeString;
       })
       .join("\n\n");
   };
@@ -116,49 +175,47 @@ const App = () => {
     <div className="app">
       <h1>Subgraph Playground</h1>
       <div className="subgraph-details">
+        <p>Name: {SUBGRAPH_ID[0].name}</p>
         <p>ID: {SUBGRAPH_ID[0].key}</p>
+        <p>Deployment ID: {subgraphName || "Loading..."}</p>
       </div>
       <div className="tableFrame">
         <table>
           <thead>
             <tr>
-              <th>Schema</th>
-              <th>Data Object</th>
+              <th>Raw Schema</th>
+              <th>Schema Data</th>
               <th>Query</th>
               <th>Result</th>
             </tr>
           </thead>
           <tbody>
-            {/* First row: Raw schema */}
             <tr>
               <td>
-                <pre>{rawSchema}</pre> {/* Raw schema in Column 1 */}
+                <pre>{rawSchema}</pre>
               </td>
               <td>
-                <pre>{schemaData}</pre> {/* Data Object in Column 2 */}
+                <pre dangerouslySetInnerHTML={{ __html: schemaData }} />
               </td>
               <td>
-                {/* Third Column: Predefined query */}
                 <textarea
                   rows="6"
-                  value={query} // Default query value
-                  onChange={(e) => setQuery(e.target.value)} // Allow user modification
+                  value={query}
+                  onChange={(e) => setQuery(e.target.value)}
                   style={{
                     width: "100%",
                     marginBottom: "10px",
-                    height: "300px", // Set height to 300px
-                    resize: "vertical", // Allow vertical resize only
-                    backgroundColor: "rgba(0,0,0,0.3)", // Remove background color
-                    color: "rgb(118, 173, 177)", // Maintain text color
+                    height: "300px",
+                    resize: "vertical",
+                    backgroundColor: "rgba(0,0,0,0.3)",
+                    color: "rgb(118, 173, 177)",
                   }}
                 />
-
                 <div style={{ textAlign: "center", marginTop: "10px" }}>
                   <button onClick={executeQuery}>▶️ Play</button>
                 </div>
               </td>
               <td>
-                {/* Fourth Column: Raw query result */}
                 <pre>{queryResult}</pre>
               </td>
             </tr>

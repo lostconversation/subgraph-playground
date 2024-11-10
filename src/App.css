@@ -9,7 +9,7 @@ body {
 .app {
   font-family: Arial, sans-serif;
   font-size: 14px;
-  max-width: 1600px;
+  max-width: 1900px;
   margin: 0 auto;
   font-size: 12px;
 }
@@ -18,7 +18,9 @@ body {
   top: 10px;
   right: 20px;
 }
-
+.subgraph-details {
+  font-size: 18px;
+}
 .tab-button {
   margin: 0 10px;
   padding: 10px 20px;
@@ -49,10 +51,31 @@ button:hover {
 /* Full-width table */
 table {
   width: 100%;
+  table-layout: fixed;
   border-collapse: collapse;
   margin-bottom: 20px;
   color: rgb(118, 173, 177);
-  table-layout: fixed; /* Ensures columns are of equal width */
+}
+
+/* Set specific widths for each column */
+th:nth-child(1),
+td:nth-child(1) {
+  width: 10%;
+}
+
+th:nth-child(2),
+td:nth-child(2) {
+  width: 20%;
+}
+
+th:nth-child(3),
+td:nth-child(3) {
+  width: 35%;
+}
+
+th:nth-child(4),
+td:nth-child(4) {
+  width: 35%;
 }
 
 /* Equal-width columns */
@@ -62,34 +85,66 @@ td {
   border: 1px solid rgb(15, 18, 26);
   text-align: left;
   vertical-align: top;
-  width: 25%; /* Ensures each column takes 25% of the total width */
 }
 
 th {
   background-color: #1e3b54;
+  transition: background-color 0.3s;
+}
+
+th:hover {
+  background-color: rgba(255, 255, 255, 0.1);
 }
 
 td {
   background-color: #182931;
+  transition: width 0.3s;
+  overflow: hidden;
+  white-space: nowrap;
 }
 
-/* Table row hover effect */
-
-/* Pie chart container styling */
-.pieChartContainer {
-  display: flex;
-  justify-content: space-around;
-  margin: 20px 0;
+td pre {
+  overflow-x: auto;
+  white-space: pre-wrap;
 }
 
-.pieChartContainer div {
-  background-color: #f9f9f9;
-  padding: 15px;
-  border-radius: 10px;
-  width: 30%;
-  box-shadow: 0px 4px 6px rgba(0, 0, 0, 0.1);
+pre {
+  white-space: pre-wrap;
 }
 
-.subgraph-details {
-  font-size: 18px;
+/* Style for field lines */
+pre span {
+  position: relative;
+  padding-left: 15px;
+}
+
+/* Create bullet points using CSS */
+pre span::before {
+  content: "•";
+  position: absolute;
+  left: 0;
+  user-select: none; /* Makes the bullet point non-selectable */
+}
+
+/* Raw Schema column specific styling */
+td:first-child {
+  overflow-x: auto;
+  max-width: 200px !important; /* Force maximum width */
+}
+
+td:first-child pre {
+  white-space: pre;
+  display: inline-block;
+  min-width: 100%;
+}
+
+/* Keep other pre elements wrapping */
+td:not(:first-child) pre {
+  white-space: pre-wrap;
+}
+
+/* Make sure the pre elements take full width of their cells */
+td pre {
+  margin: 0;
+  width: 100%;
 }
