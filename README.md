@@ -1,21 +1,4 @@
 # Subgraph Playground
 
-## Goal
-
-I want to replicate the "Explorer" column on The Graph playground.
-
-## Image 1
-
-![Image 1](https://lostconversation/subgraph-playground/blob/main/public/img_aave.png)
-_here on the right side_
-
-In my app:
-column 1: the raw schema
-column 2: the data object
-column 3: query
-column 4: response
-
-## Image 2
-
-![Image 2](https://lostconversation/subgraph-playground/blob/main/public/img_local.png)
-_the content in column 2 does not match the Explorer above_
+![Image 1](https://github.com/lostconversation/subgraph-playground/blob/main/public/img_current.png)
+I can inspect subgraphs and see what schema is actually queryable
