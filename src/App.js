@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { API_KEY, SUBGRAPH_ID } from "./stuff";
+import { holisticQuery } from "./holisticQuery";
 import "./App.css";
 
 const App = () => {
@@ -214,6 +215,9 @@ const App = () => {
                 />
                 <div style={{ textAlign: "center", marginTop: "10px" }}>
                   <button onClick={executeQuery}>▶️ Play</button>
+                  <button onClick={() => holisticQuery(setQueryResult)}>
+                    holistic
+                  </button>
                 </div>
               </td>
               <td>
