@@ -8,12 +8,18 @@ const App = () => {
   const [rawSchema, setRawSchema] = useState(""); // For raw schema data
   const [queryResult, setQueryResult] = useState(""); // Store the result of the query
   const [query, setQuery] = useState(`{
-    tokens(first: 10) {
-      lastPriceUSD
-      name
-      symbol
-    }                  
-  }`); // Set the default query here
+  _meta {
+    deployment
+    hasIndexingErrors
+    block {
+      number
+      timestamp
+    }
+  }
+  releasePeriods (first:10) {
+   id
+  }
+}`); // Set the default query here
   const [loading, setLoading] = useState(true);
   const [deploymentId, setDeploymentId] = useState("");
   const hasFetchedData = React.useRef(false);
@@ -216,7 +222,7 @@ const App = () => {
                 <div style={{ textAlign: "center", marginTop: "10px" }}>
                   <button onClick={executeQuery}>▶️ Play</button>
                   <button onClick={() => holisticQuery(setQueryResult)}>
-                    holistic
+                    🔎 Holistic Search
                   </button>
                 </div>
               </td>
