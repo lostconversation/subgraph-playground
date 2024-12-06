@@ -14,7 +14,7 @@ const App = () => {
     }                  
   }`); // Set the default query here
   const [loading, setLoading] = useState(true);
-  const [subgraphName, setSubgraphName] = useState("");
+  const [deploymentId, setDeploymentId] = useState("");
   const hasFetchedData = React.useRef(false);
 
   useEffect(() => {
@@ -96,7 +96,7 @@ const App = () => {
         if (!mounted) return;
 
         if (metaData?.data?._meta?.deployment) {
-          setSubgraphName(metaData.data._meta.deployment);
+          setDeploymentId(metaData.data._meta.deployment);
           console.log("Deployment ID:", metaData.data._meta.deployment);
         }
 
@@ -178,7 +178,7 @@ const App = () => {
       <div className="subgraph-details">
         <p>Name: {SUBGRAPH_ID[0].name}</p>
         <p>ID: {SUBGRAPH_ID[0].key}</p>
-        <p>Deployment ID: {subgraphName || "Loading..."}</p>
+        <p>Deployment ID: {deploymentId || "Loading..."}</p>
       </div>
       <div className="tableFrame">
         <table>
