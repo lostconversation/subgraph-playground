@@ -15,10 +15,17 @@ const App = () => {
   }`); // Set the default query here
   const [loading, setLoading] = useState(true);
   const [subgraphName, setSubgraphName] = useState("");
+  const hasFetchedData = React.useRef(false);
 
   useEffect(() => {
-    const fetchSchema = async () => {
+    let mounted = true;
+
+    const fetchData = async () => {
+      // Skip if we've already fetched the data
+      if (hasFetchedData.current) return;
+
       try {
+        // Fetch Schema
         const introspectionQuery = `
           query {
             __schema {
@@ -44,8 +51,6 @@ const App = () => {
             }
           }`;
 
-        console.log("Fetching schema...");
-
         const schemaResponse = await fetch(
           `https://gateway.thegraph.com/api/${API_KEY}/subgraphs/id/${SUBGRAPH_ID[0].key}`,
           {
@@ -58,63 +63,59 @@ const App = () => {
         );
 
         const schemaData = await schemaResponse.json();
-        console.log("Received schema data:", schemaData);
+        if (!mounted) return;
 
         setRawSchema(JSON.stringify(schemaData, null, 2));
-
         const formatted = formatSchema(schemaData);
-        console.log("Formatted schema:", formatted);
-
         setSchemaData(formatted);
+
+        // Fetch Subgraph Name
+        const metaQuery = `
+          query {
+            _meta {
+              deployment
+              block {
+                number
+              }
+              hasIndexingErrors
+            }
+          }`;
+
+        const metaResponse = await fetch(
+          `https://gateway.thegraph.com/api/${API_KEY}/subgraphs/id/${SUBGRAPH_ID[0].key}`,
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({ query: metaQuery }),
+          }
+        );
+
+        const metaData = await metaResponse.json();
+        if (!mounted) return;
+
+        if (metaData?.data?._meta?.deployment) {
+          setSubgraphName(metaData.data._meta.deployment);
+          console.log("Deployment ID:", metaData.data._meta.deployment);
+        }
+
         setLoading(false);
+        hasFetchedData.current = true; // Set the flag after successful fetch
       } catch (err) {
-        console.error("Error fetching schema data:", err);
-        setLoading(false);
+        console.error("Error fetching data:", err);
+        if (mounted) {
+          setLoading(false);
+        }
       }
     };
 
-    fetchSchema();
-  }, []); // This will run only once when the component mounts
+    fetchData();
 
-  useEffect(() => {
-    fetchSubgraphName();
+    return () => {
+      mounted = false;
+    };
   }, []);
-
-  const fetchSubgraphName = async () => {
-    try {
-      const metaQuery = `
-        query {
-          _meta {
-            deployment
-            block {
-              number
-            }
-            hasIndexingErrors
-          }
-        }`;
-
-      const response = await fetch(
-        `https://gateway.thegraph.com/api/${API_KEY}/subgraphs/id/${SUBGRAPH_ID[0].key}`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({ query: metaQuery }),
-        }
-      );
-
-      const data = await response.json();
-      console.log("Metadata:", data); // This will help us see what's available
-
-      // Once we see the actual structure, we can update this line to get the correct field
-      if (data?.data?._meta?.deployment) {
-        setSubgraphName(data.data._meta.deployment);
-      }
-    } catch (err) {
-      console.error("Error fetching subgraph metadata:", err);
-    }
-  };
 
   // Function to format schema with hierarchical structure
   const formatSchema = (data) => {
