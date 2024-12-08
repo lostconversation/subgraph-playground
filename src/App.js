@@ -1,12 +1,12 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { API_KEY, SUBGRAPH_ID } from "./stuff";
 import { holisticQuery } from "./holisticQuery";
 import "./App.css";
 
 const App = () => {
-  const [schemaData, setSchemaData] = useState(""); // For formatted schema
-  const [rawSchema, setRawSchema] = useState(""); // For raw schema data
-  const [queryResult, setQueryResult] = useState(""); // Store the result of the query
+  const [schemaData, setSchemaData] = useState("");
+  const [rawSchema, setRawSchema] = useState("");
+  const [queryResult, setQueryResult] = useState("");
   const [query, setQuery] = useState(`{
   _meta {
     deployment
@@ -16,29 +16,117 @@ const App = () => {
       timestamp
     }
   }
-  releasePeriods (first:10) {
-   id
-  }
-}`); // Set the default query here
+}`);
   const [loading, setLoading] = useState(true);
   const [deploymentId, setDeploymentId] = useState("");
-  const hasFetchedData = React.useRef(false);
+  const [activeSubgraph, setActiveSubgraph] = useState(SUBGRAPH_ID[0].key);
+
+  const executeQuery = async () => {
+    try {
+      const response = await fetch(
+        `https://gateway.thegraph.com/api/${API_KEY}/subgraphs/id/${activeSubgraph}`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ query }),
+        }
+      );
+      const result = await response.json();
+      setQueryResult(JSON.stringify(result, null, 2));
+    } catch (err) {
+      console.error("Error executing query:", err);
+    }
+  };
+
+  const pluralize = (typeName) => {
+    if (typeName.endsWith("s")) {
+      return typeName;
+    }
+    return typeName + "s";
+  };
+
+  const cleanFieldName = (fieldName) => {
+    return fieldName.endsWith("_") ? fieldName.slice(0, -1) : fieldName;
+  };
+
+  const formatGraphQLQuery = (query) => {
+    // Split the query into lines and filter out any empty lines
+    const lines = query.split("\n").filter((line) => line.trim() !== "");
+
+    // Reconstruct the query with proper indentation
+    let formattedQuery = "";
+    let indentLevel = 0;
+
+    lines.forEach((line) => {
+      if (line.includes("}")) {
+        indentLevel -= 1;
+      }
+
+      formattedQuery += "  ".repeat(indentLevel) + line.trim() + "\n";
+
+      if (line.includes("{")) {
+        indentLevel += 1;
+      }
+    });
+
+    return formattedQuery.trim();
+  };
+
+  const toggleFieldInQuery = useCallback(
+    (typeName, fieldName) => {
+      const lowerCaseTypeName = pluralize(
+        typeName.slice(0, 2).toLowerCase() + typeName.slice(2)
+      );
+      const regex = new RegExp(
+        `(${lowerCaseTypeName}\\s*\\{)([^}]*)(\\})`,
+        "s"
+      );
+      const match = query.match(regex);
+
+      const cleanedFieldName = cleanFieldName(fieldName);
+
+      if (match) {
+        const fields = match[2].split(/\s+/).filter(Boolean);
+        const fieldIndex = fields.indexOf(cleanedFieldName);
+
+        if (fieldIndex > -1) {
+          fields.splice(fieldIndex, 1);
+        } else {
+          fields.push(cleanedFieldName);
+        }
+
+        const newFields = fields
+          .sort()
+          .map((field) => `  ${field}`)
+          .join("\n");
+        let newQuery;
+        if (newFields.trim()) {
+          newQuery = query.replace(regex, `$1\n${newFields}\n$3`);
+        } else {
+          newQuery = query.replace(regex, "");
+        }
+        setQuery(formatGraphQLQuery(newQuery));
+      } else {
+        const newQuery = query.replace(
+          /\}\s*$/,
+          `\n${lowerCaseTypeName} {\n  ${cleanedFieldName}\n}\n}`
+        );
+        setQuery(formatGraphQLQuery(newQuery));
+      }
+    },
+    [query]
+  );
 
   useEffect(() => {
     let mounted = true;
 
     const fetchData = async () => {
-      // Skip if we've already fetched the data
-      if (hasFetchedData.current) return;
-
       try {
-        // Fetch Schema
         const introspectionQuery = `
           query {
             __schema {
-              queryType {
-                name
-              }
               types {
                 name
                 description
@@ -59,7 +147,7 @@ const App = () => {
           }`;
 
         const schemaResponse = await fetch(
-          `https://gateway.thegraph.com/api/${API_KEY}/subgraphs/id/${SUBGRAPH_ID[0].key}`,
+          `https://gateway.thegraph.com/api/${API_KEY}/subgraphs/id/${activeSubgraph}`,
           {
             method: "POST",
             headers: {
@@ -73,10 +161,8 @@ const App = () => {
         if (!mounted) return;
 
         setRawSchema(JSON.stringify(schemaData, null, 2));
-        const formatted = formatSchema(schemaData);
-        setSchemaData(formatted);
+        setSchemaData(formatSchema(schemaData));
 
-        // Fetch Subgraph Name
         const metaQuery = `
           query {
             _meta {
@@ -89,7 +175,7 @@ const App = () => {
           }`;
 
         const metaResponse = await fetch(
-          `https://gateway.thegraph.com/api/${API_KEY}/subgraphs/id/${SUBGRAPH_ID[0].key}`,
+          `https://gateway.thegraph.com/api/${API_KEY}/subgraphs/id/${activeSubgraph}`,
           {
             method: "POST",
             headers: {
@@ -104,11 +190,9 @@ const App = () => {
 
         if (metaData?.data?._meta?.deployment) {
           setDeploymentId(metaData.data._meta.deployment);
-          console.log("Deployment ID:", metaData.data._meta.deployment);
         }
 
         setLoading(false);
-        hasFetchedData.current = true; // Set the flag after successful fetch
       } catch (err) {
         console.error("Error fetching data:", err);
         if (mounted) {
@@ -122,60 +206,90 @@ const App = () => {
     return () => {
       mounted = false;
     };
-  }, []);
+  }, [activeSubgraph]);
 
-  // Function to format schema with hierarchical structure
   const formatSchema = (data) => {
     const schema = data?.data?.__schema?.types || [];
-
     const filteredSchema = schema.filter(
       (type) => type && type.name && !type.name.startsWith("__")
     );
 
-    return filteredSchema
-      .map((type) => {
-        let typeString = `${type.name}`;
-        if (type.fields) {
-          const sortedFields = type.fields
-            .filter((field) => field && field.name)
-            .sort((a, b) => {
-              // If either field is 'id', handle special cases
-              if (a.name === "id") return -1; // a is 'id', move it first
-              if (b.name === "id") return 1; // b is 'id', move it first
-              // Otherwise sort alphabetically
-              return a.name.localeCompare(b.name);
-            });
+    const typesWithIdAndContent = [];
+    const typesWithContentNoId = [];
+    const emptyTypes = [];
 
-          const fields = sortedFields
-            .map((field) => `<span>${field.name}</span>`)
-            .join("\n");
-          typeString += `\n${fields}`;
+    filteredSchema.forEach((type) => {
+      if (!type.fields || type.fields.length === 0) {
+        emptyTypes.push(type);
+      } else {
+        const hasId = type.fields.some((field) => field.name === "id");
+        if (hasId) {
+          typesWithIdAndContent.push(type);
+        } else {
+          typesWithContentNoId.push(type);
         }
-        return typeString;
-      })
-      .join("\n\n");
+      }
+    });
+
+    const sortByName = (a, b) => a.name.localeCompare(b.name);
+    typesWithIdAndContent.sort(sortByName);
+    typesWithContentNoId.sort(sortByName);
+    emptyTypes.sort(sortByName);
+
+    const formatType = (type) => {
+      let typeString = `<div class="type-header">${type.name}</div>`;
+      if (type.fields) {
+        const sortedFields = type.fields
+          .filter((field) => field && field.name)
+          .sort((a, b) => a.name.localeCompare(b.name));
+
+        const fields = sortedFields
+          .map(
+            (field) =>
+              `<div class="field-container"><span class="clickable-field" onclick="window.toggleFieldInQuery('${
+                type.name
+              }', '${field.name}')">${
+                field.name
+              }</span><span class="field-description" onclick="window.toggleFieldInQuery('${
+                type.name
+              }', '${field.name}')">${field.description || ""}</span></div>`
+          )
+          .join("");
+        typeString += fields;
+      }
+      return typeString;
+    };
+
+    return [
+      ...typesWithIdAndContent.map(formatType),
+      '<div class="separator">Types without ID</div>',
+      ...typesWithContentNoId.map(formatType),
+      '<div class="separator">Types without Fields</div>',
+      ...emptyTypes.map(
+        (type) => `<div class="type-header empty">${type.name}</div>`
+      ),
+    ].join("\n\n");
   };
 
-  // Handle the query execution when user clicks 'Play'
-  const executeQuery = async () => {
-    try {
-      const response = await fetch(
-        `https://gateway.thegraph.com/api/${API_KEY}/subgraphs/id/${SUBGRAPH_ID[0].key}`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({ query }),
-        }
-      );
+  useEffect(() => {
+    const fieldContainers = document.querySelectorAll(".field-container");
 
-      const result = await response.json();
-      setQueryResult(JSON.stringify(result, null, 2)); // Display the raw result
-    } catch (err) {
-      console.error("Error executing query:", err);
-    }
-  };
+    fieldContainers.forEach((container) => {
+      const description = container.querySelector(".field-description");
+      if (description.scrollWidth > description.clientWidth) {
+        description.classList.add("overflowing");
+      } else {
+        description.classList.remove("overflowing");
+      }
+    });
+  }, [schemaData]);
+
+  useEffect(() => {
+    window.toggleFieldInQuery = toggleFieldInQuery;
+    return () => {
+      delete window.toggleFieldInQuery;
+    };
+  }, [toggleFieldInQuery]);
 
   if (loading) return <p>Loading...</p>;
 
@@ -183,8 +297,18 @@ const App = () => {
     <div className="app">
       <h1>Subgraph Playground</h1>
       <div className="subgraph-details">
-        <p>Name: {SUBGRAPH_ID[0].name}</p>
-        <p>ID: {SUBGRAPH_ID[0].key}</p>
+        <select
+          className="dropdown"
+          value={activeSubgraph}
+          onChange={(e) => setActiveSubgraph(e.target.value)}
+        >
+          {SUBGRAPH_ID.map((subgraph) => (
+            <option key={subgraph.key} value={subgraph.key}>
+              {subgraph.name}
+            </option>
+          ))}
+        </select>
+        <p>ID: {activeSubgraph}</p>
         <p>Deployment ID: {deploymentId || "Loading..."}</p>
       </div>
       <div className="tableFrame">
@@ -199,13 +323,19 @@ const App = () => {
           </thead>
           <tbody>
             <tr>
-              <td>
+              <td className="col1txt">
                 <pre>{rawSchema}</pre>
               </td>
-              <td>
+              <td className="col2txt">
                 <pre dangerouslySetInnerHTML={{ __html: schemaData }} />
               </td>
-              <td>
+              <td className="col3txt">
+                <div style={{ textAlign: "left", marginTop: "10px" }}>
+                  {/* <button onClick={() => holisticQuery(setQueryResult)}>
+                    Holistic Search
+                  </button> */}
+                  <button onClick={executeQuery}>CHECK</button>
+                </div>
                 <textarea
                   rows="6"
                   value={query}
@@ -213,18 +343,12 @@ const App = () => {
                   style={{
                     width: "100%",
                     marginBottom: "10px",
-                    height: "300px",
+                    height: "600px",
                     resize: "vertical",
                     backgroundColor: "rgba(0,0,0,0.3)",
                     color: "rgb(118, 173, 177)",
                   }}
                 />
-                <div style={{ textAlign: "center", marginTop: "10px" }}>
-                  <button onClick={executeQuery}>▶️ Play</button>
-                  <button onClick={() => holisticQuery(setQueryResult)}>
-                    🔎 Holistic Search
-                  </button>
-                </div>
               </td>
               <td>
                 <pre>{queryResult}</pre>
