@@ -295,7 +295,7 @@ const App = () => {
       ...emptyTypes.map(
         (type) => `<div class="type-header empty">${type.name}</div>`
       ),
-    ].join("\n\n");
+    ].join("\n");
   };
 
   useEffect(() => {
@@ -351,40 +351,45 @@ const App = () => {
           <tbody>
             <tr>
               <td className="col1txt">
-                <pre>{rawSchema}</pre>
+                <div className="scrollable-column">
+                  <pre>{rawSchema}</pre>
+                </div>
               </td>
               <td className="col2txt">
-                <pre dangerouslySetInnerHTML={{ __html: schemaData }} />
+                <div className="scrollable-column">
+                  <pre dangerouslySetInnerHTML={{ __html: schemaData }} />
+                </div>
               </td>
               <td className="col3txt">
-                <div style={{ textAlign: "left", marginTop: "10px" }}>
-                  {/* <button onClick={() => holisticQuery(setQueryResult)}>
-                    Holistic Search
-                  </button> */}
-                  <button onClick={executeQuery}>CHECK</button>
+                <div className="scrollable-column">
+                  <textarea
+                    rows="6"
+                    value={query}
+                    onChange={(e) => setQuery(e.target.value)}
+                    className="query-display"
+                    style={{
+                      width: "95%",
+                      marginBottom: "10px",
+                      height: "600px",
+                      resize: "vertical",
+                      backgroundColor: "rgba(0,0,0,0.3)",
+                    }}
+                  />
+                  <div style={{ textAlign: "left", marginTop: "10px" }}>
+                    <button onClick={executeQuery}>Run Query</button>
+                  </div>
                 </div>
-                <textarea
-                  rows="6"
-                  value={query}
-                  onChange={(e) => setQuery(e.target.value)}
-                  className="query-display"
-                  style={{
-                    width: "100%",
-                    marginBottom: "10px",
-                    height: "600px",
-                    resize: "vertical",
-                    backgroundColor: "rgba(0,0,0,0.3)",
-                    // color: "rgb(118, 173, 177)",
-                  }}
-                />
               </td>
               <td>
-                <pre>{queryResult}</pre>
+                <div className="scrollable-column">
+                  <pre>{queryResult}</pre>
+                </div>
               </td>
             </tr>
           </tbody>
         </table>
       </div>
+      <div className="footer">Footer Content</div>
     </div>
   );
 };
