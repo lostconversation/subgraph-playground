@@ -4,22 +4,24 @@ import { holisticQuery } from "./holisticQuery";
 import "./App.css";
 
 const App = () => {
+  const initialSubgraphIndex = 2;
+  const initialSubgraphKey = SUBGRAPH_ID[initialSubgraphIndex - 1].key;
   const [schemaData, setSchemaData] = useState("");
   const [rawSchema, setRawSchema] = useState("");
   const [queryResult, setQueryResult] = useState("");
   const [query, setQuery] = useState(`{
-  _meta {
-    deployment
-    hasIndexingErrors
-    block {
-      number
-      timestamp
+    _meta {
+      deployment
+      hasIndexingErrors
+      block {
+        number
+        timestamp
+      }
     }
-  }
-}`);
+  }`);
   const [loading, setLoading] = useState(true);
   const [deploymentId, setDeploymentId] = useState("");
-  const [activeSubgraph, setActiveSubgraph] = useState(SUBGRAPH_ID[0].key);
+  const [activeSubgraph, setActiveSubgraph] = useState(initialSubgraphKey);
 
   const executeQuery = async () => {
     try {
@@ -52,10 +54,7 @@ const App = () => {
   };
 
   const formatGraphQLQuery = (query) => {
-    // Split the query into lines and filter out any empty lines
     const lines = query.split("\n").filter((line) => line.trim() !== "");
-
-    // Reconstruct the query with proper indentation
     let formattedQuery = "";
     let indentLevel = 0;
 
@@ -80,7 +79,7 @@ const App = () => {
         typeName.slice(0, 2).toLowerCase() + typeName.slice(2)
       );
       const regex = new RegExp(
-        `(${lowerCaseTypeName}\\s*\\{)([^}]*)(\\})`,
+        `(${lowerCaseTypeName}\\s*\\([^)]*\\)\\s*\\{)([^}]*?)(\\})`,
         "s"
       );
       const match = query.match(regex);
@@ -109,10 +108,13 @@ const App = () => {
         }
         setQuery(formatGraphQLQuery(newQuery));
       } else {
-        const newQuery = query.replace(
-          /\}\s*$/,
-          `\n${lowerCaseTypeName} {\n  ${cleanedFieldName}\n}\n}`
-        );
+        const newTypeBlock =
+          `${lowerCaseTypeName}(` +
+          `\n    first: 5,` +
+          `\n    orderBy: id,` +
+          `\n    orderDirection: asc` +
+          `\n) {\n  ${cleanedFieldName}\n}`;
+        const newQuery = query.replace(/\}\s*$/, `\n${newTypeBlock}\n}`);
         setQuery(formatGraphQLQuery(newQuery));
       }
     },
@@ -203,10 +205,29 @@ const App = () => {
 
     fetchData();
 
+    // Reset the query to its original state when a new subgraph is loaded
+    setQuery(
+      formatGraphQLQuery(`{
+      _meta {
+        deployment
+        hasIndexingErrors
+        block {
+          number
+          timestamp
+        }
+      }
+    }`)
+    );
+
     return () => {
       mounted = false;
     };
   }, [activeSubgraph]);
+
+  useEffect(() => {
+    // Format the initial query to ensure correct indentation on page load
+    setQuery(formatGraphQLQuery(query));
+  }, []);
 
   const formatSchema = (data) => {
     const schema = data?.data?.__schema?.types || [];
@@ -244,16 +265,22 @@ const App = () => {
           .sort((a, b) => a.name.localeCompare(b.name));
 
         const fields = sortedFields
-          .map(
-            (field) =>
-              `<div class="field-container"><span class="clickable-field" onclick="window.toggleFieldInQuery('${
+          .map((field) => {
+            const hasChildren =
+              field.type.kind === "OBJECT" || field.type.kind === "LIST";
+            return `<div class="field-container">
+              <span class="clickable-field" onclick="window.toggleFieldInQuery('${
                 type.name
-              }', '${field.name}')">${
-                field.name
-              }</span><span class="field-description" onclick="window.toggleFieldInQuery('${
+              }', '${field.name}')">
+                ${field.name}${hasChildren ? " (has children)" : ""}
+              </span>
+              <span class="field-description" onclick="window.toggleFieldInQuery('${
                 type.name
-              }', '${field.name}')">${field.description || ""}</span></div>`
-          )
+              }', '${field.name}')">
+                ${field.description || ""}
+              </span>
+            </div>`;
+          })
           .join("");
         typeString += fields;
       }
@@ -340,13 +367,14 @@ const App = () => {
                   rows="6"
                   value={query}
                   onChange={(e) => setQuery(e.target.value)}
+                  className="query-display"
                   style={{
                     width: "100%",
                     marginBottom: "10px",
                     height: "600px",
                     resize: "vertical",
                     backgroundColor: "rgba(0,0,0,0.3)",
-                    color: "rgb(118, 173, 177)",
+                    // color: "rgb(118, 173, 177)",
                   }}
                 />
               </td>

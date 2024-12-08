@@ -253,3 +253,13 @@ td pre {
   border: none;
   color: #fff;
 }
+.query-display {
+  font-family: monospace;
+  color: #fff;
+  opacity: 0.6;
+}
+
+.query-display .filter {
+  opacity: 0.3; /* 50% transparent */
+  /* color: #888; Or any color you prefer */
+}
