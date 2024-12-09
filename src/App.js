@@ -63,7 +63,16 @@ const App = () => {
         indentLevel -= 1;
       }
 
-      formattedQuery += "  ".repeat(indentLevel) + line.trim() + "\n";
+      // Check for specific lines and add extra spaces
+      if (
+        line.trim().startsWith("first") ||
+        line.trim().startsWith("orderBy") ||
+        line.trim().startsWith("orderDirection")
+      ) {
+        formattedQuery += "  " + "  ".repeat(indentLevel) + line.trim() + "\n"; // Add two extra spaces
+      } else {
+        formattedQuery += "  ".repeat(indentLevel) + line.trim() + "\n";
+      }
 
       if (line.includes("{")) {
         indentLevel += 1;
@@ -244,20 +253,34 @@ const App = () => {
       } else {
         const hasId = type.fields.some((field) => field.name === "id");
         if (hasId) {
-          typesWithIdAndContent.push(type);
+          const displayName = type.name.startsWith("_")
+            ? type.name.slice(1)
+            : type.name;
+          console.log(`Type with ID: ${displayName}`); // Log types with an ID, removing underscore
+          typesWithIdAndContent.push({ ...type, displayName });
         } else {
-          typesWithContentNoId.push(type);
+          const displayName = type.name.startsWith("_")
+            ? type.name.slice(1)
+            : type.name;
+          typesWithContentNoId.push({ ...type, displayName });
         }
       }
     });
 
-    const sortByName = (a, b) => a.name.localeCompare(b.name);
-    typesWithIdAndContent.sort(sortByName);
-    typesWithContentNoId.sort(sortByName);
-    emptyTypes.sort(sortByName);
+    const sortByDisplayName = (a, b) => {
+      const nameA = a.displayName || a.name;
+      const nameB = b.displayName || b.name;
+      return nameA.localeCompare(nameB);
+    };
+
+    typesWithIdAndContent.sort(sortByDisplayName);
+    typesWithContentNoId.sort(sortByDisplayName);
+    emptyTypes.sort(sortByDisplayName);
 
     const formatType = (type) => {
-      let typeString = `<div class="type-header">${type.name}</div>`;
+      let typeString = `<div class="type-header">${
+        type.displayName || type.name
+      }</div>`;
       if (type.fields) {
         const sortedFields = type.fields
           .filter((field) => field && field.name)
