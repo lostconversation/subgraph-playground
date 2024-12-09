@@ -4,7 +4,7 @@ import { holisticQuery } from "./holisticQuery";
 import "./App.css";
 
 const App = () => {
-  const initialSubgraphIndex = 2;
+  const initialSubgraphIndex = 4;
   const initialSubgraphKey = SUBGRAPH_ID[initialSubgraphIndex - 1].key;
   const [schemaData, setSchemaData] = useState("");
   const [rawSchema, setRawSchema] = useState("");
@@ -225,9 +225,8 @@ const App = () => {
   }, [activeSubgraph]);
 
   useEffect(() => {
-    // Format the initial query to ensure correct indentation on page load
     setQuery(formatGraphQLQuery(query));
-  }, []);
+  }, [query]);
 
   const formatSchema = (data) => {
     const schema = data?.data?.__schema?.types || [];
