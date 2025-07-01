@@ -256,7 +256,6 @@ const App = () => {
           const displayName = type.name.startsWith("_")
             ? type.name.slice(1)
             : type.name;
-          console.log(`Type with ID: ${displayName}`); // Log types with an ID, removing underscore
           typesWithIdAndContent.push({ ...type, displayName });
         } else {
           const displayName = type.name.startsWith("_")
